@@ -1,6 +1,8 @@
 -- Initialize database with sample data
+-- Note: Tables will be created by FastAPI/SQLAlchemy when the backend starts
+-- This script will be run after table creation
 
--- Sample attractions for testing
+-- Sample attractions for testing (only insert if table exists)
 INSERT INTO attractions (name, description, category, city, country, latitude, longitude, rating, price_level, tags) VALUES
 ('Eiffel Tower', 'Iconic iron lattice tower and symbol of Paris', 'landmark', 'Paris', 'France', 48.8584, 2.2945, 4.6, 2, '["landmark", "tower", "iconic", "romantic"]'),
 ('Louvre Museum', 'World''s largest art museum and historic monument', 'museum', 'Paris', 'France', 48.8606, 2.3376, 4.5, 3, '["museum", "art", "history", "culture"]'),

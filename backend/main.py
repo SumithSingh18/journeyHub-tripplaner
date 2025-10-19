@@ -31,6 +31,10 @@ app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
 app.include_router(trips.router, prefix="/api/v1/trips", tags=["trips"])
 app.include_router(recommendations.router, prefix="/api/v1/recommendations", tags=["recommendations"])
 
+# Import auth router
+from routers import auth
+app.include_router(auth.router, prefix="/api/v1/auth", tags=["authentication"])
+
 @app.get("/")
 async def root():
     return {"message": "TripPlanner API", "version": "1.0.0"}
