@@ -16,7 +16,7 @@ export function Hero() {
       </div>
 
       <div className="flex flex-col sm:flex-row gap-4 justify-center">
-        <Link href="/register" className="btn-primary text-lg px-8 py-3">
+        <Link href="/trips/new" className="btn-primary text-lg px-8 py-3">
           Start Planning Free
         </Link>
         <Link href="/explore" className="btn-secondary text-lg px-8 py-3">

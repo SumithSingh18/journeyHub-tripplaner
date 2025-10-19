@@ -13,16 +13,16 @@ export function CTA() {
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
           <Link 
-            href="/register" 
+            href="/trips/new" 
             className="bg-white text-primary-600 hover:bg-gray-100 font-medium py-3 px-8 rounded-lg transition-colors text-lg"
           >
             Get Started Free
           </Link>
           <Link 
-            href="/demo" 
+            href="/explore" 
             className="border-2 border-white text-white hover:bg-white hover:text-primary-600 font-medium py-3 px-8 rounded-lg transition-colors text-lg"
           >
-            View Demo
+            Explore Destinations
           </Link>
         </div>
         <p className="text-sm text-primary-200 pt-4">
