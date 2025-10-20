@@ -2,19 +2,39 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { MapPin, Eye, EyeOff } from 'lucide-react'
+import { apiClient } from '@/lib/api'
+import { useAuth } from '@/lib/auth-context'
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
   const [formData, setFormData] = useState({
     email: '',
     password: ''
   })
+  
+  const { login } = useAuth()
+  const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // TODO: Implement login logic
-    console.log('Login attempt:', formData)
+    setIsLoading(true)
+    setError('')
+
+    try {
+      const authResponse = await apiClient.login(formData)
+      const user = await apiClient.getCurrentUser(authResponse.access_token)
+      
+      login(authResponse.access_token, user)
+      router.push('/trips')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Login failed')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -105,9 +125,19 @@ export default function LoginPage() {
               </div>
             </div>
 
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm">
+                {error}
+              </div>
+            )}
+
             <div>
-              <button type="submit" className="btn-primary w-full">
-                Sign in
+              <button 
+                type="submit" 
+                disabled={isLoading}
+                className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoading ? 'Signing in...' : 'Sign in'}
               </button>
             </div>
           </form>

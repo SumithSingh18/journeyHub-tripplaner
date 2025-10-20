@@ -2,21 +2,60 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { MapPin, Eye, EyeOff, User, Mail, Lock } from 'lucide-react'
+import { apiClient } from '@/lib/api'
+import { useAuth } from '@/lib/auth-context'
 
 export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
     password: '',
     confirmPassword: ''
   })
+  
+  const { login } = useAuth()
+  const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // TODO: Implement registration logic
-    console.log('Registration attempt:', formData)
+    setIsLoading(true)
+    setError('')
+
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match')
+      setIsLoading(false)
+      return
+    }
+
+    try {
+      // Create username from email (before @ symbol)
+      const username = formData.email.split('@')[0]
+      
+      const user = await apiClient.register({
+        email: formData.email,
+        username: username,
+        password: formData.password,
+        full_name: formData.fullName
+      })
+      
+      // Auto-login after registration
+      const authResponse = await apiClient.login({
+        email: formData.email,
+        password: formData.password
+      })
+      
+      login(authResponse.access_token, user)
+      router.push('/trips')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Registration failed')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -144,9 +183,19 @@ export default function RegisterPage() {
               </label>
             </div>
 
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm">
+                {error}
+              </div>
+            )}
+
             <div>
-              <button type="submit" className="btn-primary w-full">
-                Create Account
+              <button 
+                type="submit" 
+                disabled={isLoading}
+                className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoading ? 'Creating Account...' : 'Create Account'}
               </button>
             </div>
           </form>

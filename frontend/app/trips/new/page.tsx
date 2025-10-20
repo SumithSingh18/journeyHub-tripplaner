@@ -1,8 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { MapPin, Calendar, Users, DollarSign, Heart, Plane, Car, Train, ArrowRight } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { MapPin, Users, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
+import { useAuth } from '@/lib/auth-context'
+import { apiClient } from '@/lib/api'
 
 const travelStyles = [
   { id: 'relaxed', name: 'Relaxed', icon: '🏖️', description: 'Take it slow and enjoy the moment' },
@@ -29,6 +32,11 @@ const interests = [
 
 export default function NewTripPage() {
   const [step, setStep] = useState(1)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
+  const { token } = useAuth()
+  const router = useRouter()
+
   const [formData, setFormData] = useState({
     destination: '',
     startDate: '',
@@ -58,9 +66,41 @@ export default function NewTripPage() {
     if (step > 1) setStep(step - 1)
   }
 
-  const handleSubmit = () => {
-    console.log('Creating trip:', formData)
-    // TODO: Submit to API
+  const handleSubmit = async () => {
+    setIsLoading(true)
+    setError('')
+
+    try {
+      const tripData = {
+        title: `${formData.destination} Trip`,
+        description: `A ${formData.travelStyle} trip to ${formData.destination}`,
+        destination: formData.destination,
+        start_date: new Date(formData.startDate).toISOString(),
+        end_date: new Date(formData.endDate).toISOString(),
+        budget: getBudgetAmount(formData.budget),
+        interests: formData.interests
+      }
+
+      const trip = await apiClient.createTrip(tripData, token!)
+
+      // Generate itinerary
+      await apiClient.generateItinerary(trip.id, token!)
+
+      router.push(`/trips/${trip.id}`)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create trip')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const getBudgetAmount = (budgetId: string) => {
+    const budgetMap = {
+      'budget': 50,
+      'mid': 200,
+      'luxury': 500
+    }
+    return budgetMap[budgetId as keyof typeof budgetMap] || 100
   }
 
   const isStepValid = () => {
@@ -91,17 +131,15 @@ export default function NewTripPage() {
         <div className="flex items-center justify-between mb-2">
           {[1, 2, 3, 4].map((stepNum) => (
             <div key={stepNum} className="flex items-center">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                stepNum <= step 
-                  ? 'bg-primary-600 text-white' 
-                  : 'bg-gray-200 text-gray-600'
-              }`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${stepNum <= step
+                ? 'bg-primary-600 text-white'
+                : 'bg-gray-200 text-gray-600'
+                }`}>
                 {stepNum}
               </div>
               {stepNum < 4 && (
-                <div className={`w-16 h-1 mx-2 ${
-                  stepNum < step ? 'bg-primary-600' : 'bg-gray-200'
-                }`} />
+                <div className={`w-16 h-1 mx-2 ${stepNum < step ? 'bg-primary-600' : 'bg-gray-200'
+                  }`} />
               )}
             </div>
           ))}
@@ -119,7 +157,7 @@ export default function NewTripPage() {
         {step === 1 && (
           <div className="space-y-6">
             <h2 className="text-2xl font-semibold text-gray-900 mb-6">Where would you like to go?</h2>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Destination
@@ -186,7 +224,7 @@ export default function NewTripPage() {
         {step === 2 && (
           <div className="space-y-6">
             <h2 className="text-2xl font-semibold text-gray-900 mb-6">What's your travel style?</h2>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-4">
                 Budget Range (per person)
@@ -196,11 +234,10 @@ export default function NewTripPage() {
                   <button
                     key={budget.id}
                     onClick={() => setFormData({ ...formData, budget: budget.id })}
-                    className={`p-4 rounded-lg border-2 text-left transition-colors ${
-                      formData.budget === budget.id
-                        ? 'border-primary-600 bg-primary-50'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
+                    className={`p-4 rounded-lg border-2 text-left transition-colors ${formData.budget === budget.id
+                      ? 'border-primary-600 bg-primary-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                      }`}
                   >
                     <div className="text-2xl mb-2">{budget.icon}</div>
                     <div className="font-medium text-gray-900">{budget.name}</div>
@@ -219,11 +256,10 @@ export default function NewTripPage() {
                   <button
                     key={style.id}
                     onClick={() => setFormData({ ...formData, travelStyle: style.id })}
-                    className={`p-4 rounded-lg border-2 text-left transition-colors ${
-                      formData.travelStyle === style.id
-                        ? 'border-primary-600 bg-primary-50'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
+                    className={`p-4 rounded-lg border-2 text-left transition-colors ${formData.travelStyle === style.id
+                      ? 'border-primary-600 bg-primary-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                      }`}
                   >
                     <div className="text-2xl mb-2">{style.icon}</div>
                     <div className="font-medium text-gray-900">{style.name}</div>
@@ -239,17 +275,16 @@ export default function NewTripPage() {
           <div className="space-y-6">
             <h2 className="text-2xl font-semibold text-gray-900 mb-6">What interests you?</h2>
             <p className="text-gray-600 mb-6">Select all that apply to personalize your itinerary</p>
-            
+
             <div className="grid md:grid-cols-4 gap-4">
               {interests.map((interest) => (
                 <button
                   key={interest.id}
                   onClick={() => handleInterestToggle(interest.id)}
-                  className={`p-4 rounded-lg border-2 text-center transition-colors ${
-                    formData.interests.includes(interest.id)
-                      ? 'border-primary-600 bg-primary-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
+                  className={`p-4 rounded-lg border-2 text-center transition-colors ${formData.interests.includes(interest.id)
+                    ? 'border-primary-600 bg-primary-50'
+                    : 'border-gray-200 hover:border-gray-300'
+                    }`}
                 >
                   <div className="text-2xl mb-2">{interest.icon}</div>
                   <div className="text-sm font-medium text-gray-900">{interest.name}</div>
@@ -262,7 +297,7 @@ export default function NewTripPage() {
         {step === 4 && (
           <div className="space-y-6">
             <h2 className="text-2xl font-semibold text-gray-900 mb-6">Review Your Trip</h2>
-            
+
             <div className="bg-gray-50 rounded-lg p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <span className="font-medium text-gray-700">Destination:</span>
@@ -308,7 +343,7 @@ export default function NewTripPage() {
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <h3 className="font-medium text-blue-900 mb-2">🎉 Ready to create your itinerary!</h3>
               <p className="text-blue-700 text-sm">
-                Our AI will analyze your preferences and create a personalized day-by-day itinerary with 
+                Our AI will analyze your preferences and create a personalized day-by-day itinerary with
                 recommendations for activities, restaurants, and accommodations.
               </p>
             </div>
@@ -330,8 +365,8 @@ export default function NewTripPage() {
             Cancel
           </Link>
           {step < 4 ? (
-            <button 
-              onClick={handleNext} 
+            <button
+              onClick={handleNext}
               disabled={!isStepValid()}
               className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
             >
@@ -339,9 +374,19 @@ export default function NewTripPage() {
               <ArrowRight className="h-4 w-4" />
             </button>
           ) : (
-            <button onClick={handleSubmit} className="btn-primary">
-              Create My Trip
+            <button
+              onClick={handleSubmit}
+              disabled={isLoading}
+              className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? 'Creating Trip...' : 'Create My Trip'}
             </button>
+          )}
+
+          {error && (
+            <div className="mt-4 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm">
+              {error}
+            </div>
           )}
         </div>
       </div>

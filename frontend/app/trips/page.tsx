@@ -1,8 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Plus, MapPin, Calendar, Users, MoreVertical, Search, Filter } from 'lucide-react'
+import { useAuth } from '@/lib/auth-context'
+import { apiClient } from '@/lib/api'
 
 // Mock data - will be replaced with API calls
 const mockTrips = [
@@ -15,7 +17,7 @@ const mockTrips = [
     days: 7,
     travelers: 2,
     status: 'upcoming',
-    image: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=400&h=200&fit=crop'
+    image: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=400&h=300&fit=crop&crop=center'
   },
   {
     id: 2,
@@ -26,7 +28,7 @@ const mockTrips = [
     days: 7,
     travelers: 1,
     status: 'completed',
-    image: 'https://images.unsplash.com/photo-1502602898536-47ad22581b52?w=400&h=200&fit=crop'
+    image: 'https://images.unsplash.com/photo-1502602898536-47ad22581b52?w=400&h=300&fit=crop&crop=center'
   },
   {
     id: 3,
@@ -37,17 +39,73 @@ const mockTrips = [
     days: 5,
     travelers: 1,
     status: 'completed',
-    image: 'https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=400&h=200&fit=crop'
+    image: 'https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=400&h=300&fit=crop&crop=center'
+  },
+  {
+    id: 4,
+    title: 'Bali Retreat',
+    destination: 'Bali, Indonesia',
+    startDate: '2024-04-05',
+    endDate: '2024-04-12',
+    days: 7,
+    travelers: 2,
+    status: 'draft',
+    image: 'https://images.unsplash.com/photo-1537953773345-d172ccf13cf1?w=400&h=300&fit=crop&crop=center'
   }
 ]
 
 export default function TripsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
+  const [trips, setTrips] = useState(mockTrips) // Start with mock data
+  const [isLoading, setIsLoading] = useState(false)
+  const { token, user } = useAuth()
 
-  const filteredTrips = mockTrips.filter(trip => {
+  // Fetch real trips when user is authenticated
+  useEffect(() => {
+    if (token && user) {
+      fetchTrips()
+    }
+  }, [token, user])
+
+  const fetchTrips = async () => {
+    setIsLoading(true)
+    try {
+      // For now, we'll use mock data since the API client method needs to be implemented
+      // TODO: Implement apiClient.getTrips method
+      console.log('Fetching trips for user:', user?.email)
+      // Keep using mock data for now
+    } catch (error) {
+      console.error('Failed to fetch trips:', error)
+      // Keep showing mock data on error
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const getDestinationImage = (destination: string) => {
+    // Simple mapping for common destinations
+    const imageMap: { [key: string]: string } = {
+      'tokyo': 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=400&h=300&fit=crop&crop=center',
+      'paris': 'https://images.unsplash.com/photo-1502602898536-47ad22581b52?w=400&h=300&fit=crop&crop=center',
+      'new york': 'https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=400&h=300&fit=crop&crop=center',
+      'bali': 'https://images.unsplash.com/photo-1537953773345-d172ccf13cf1?w=400&h=300&fit=crop&crop=center'
+    }
+
+    const key = destination.toLowerCase()
+    for (const [place, image] of Object.entries(imageMap)) {
+      if (key.includes(place)) {
+        return image
+      }
+    }
+
+    // Default image for unknown destinations
+    return 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=400&h=300&fit=crop&crop=center'
+  }
+
+  const filteredTrips = trips.filter(trip => {
     const matchesSearch = trip.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         trip.destination.toLowerCase().includes(searchTerm.toLowerCase())
+      trip.destination.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesFilter = filterStatus === 'all' || trip.status === filterStatus
     return matchesSearch && matchesFilter
   })
@@ -107,7 +165,7 @@ export default function TripsPage() {
           <MapPin className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">No trips found</h3>
           <p className="text-gray-600 mb-6">
-            {searchTerm || filterStatus !== 'all' 
+            {searchTerm || filterStatus !== 'all'
               ? 'Try adjusting your search or filter criteria'
               : 'Start planning your first adventure!'
             }
@@ -119,10 +177,24 @@ export default function TripsPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredTrips.map((trip) => (
-            <div key={trip.id} className="card hover:shadow-lg transition-shadow cursor-pointer">
+            <Link key={trip.id} href={`/trips/${trip.id}`} className="card hover:shadow-lg transition-shadow cursor-pointer">
               <div className="relative">
                 <div className="h-48 bg-gray-200 rounded-t-lg overflow-hidden">
-                  <div className="w-full h-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center">
+                  {trip.image ? (
+                    <img
+                      src={trip.image}
+                      alt={trip.title}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        // Fallback to gradient background if image fails to load
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        const fallback = target.nextElementSibling as HTMLElement;
+                        if (fallback) fallback.style.display = 'flex';
+                      }}
+                    />
+                  ) : null}
+                  <div className="w-full h-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center" style={{ display: trip.image ? 'none' : 'flex' }}>
                     <MapPin className="h-12 w-12 text-white" />
                   </div>
                 </div>
@@ -132,18 +204,17 @@ export default function TripsPage() {
                   </button>
                 </div>
                 <div className="absolute top-2 left-2">
-                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                    trip.status === 'upcoming' 
-                      ? 'bg-green-100 text-green-800'
-                      : trip.status === 'completed'
+                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${trip.status === 'upcoming'
+                    ? 'bg-green-100 text-green-800'
+                    : trip.status === 'completed'
                       ? 'bg-blue-100 text-blue-800'
                       : 'bg-gray-100 text-gray-800'
-                  }`}>
+                    }`}>
                     {trip.status.charAt(0).toUpperCase() + trip.status.slice(1)}
                   </span>
                 </div>
               </div>
-              
+
               <div className="p-4">
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">{trip.title}</h3>
                 <div className="flex items-center text-gray-600 mb-2">
@@ -164,7 +235,7 @@ export default function TripsPage() {
                   <span className="text-sm text-gray-500">{trip.days} days</span>
                 </div>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       )}
